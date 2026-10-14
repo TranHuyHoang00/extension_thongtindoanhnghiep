@@ -4,6 +4,38 @@
 
 let STOP = false;
 
+const META = {
+  author_id: "6071def4536dcfba68a69b160dfcecc9",
+  owner_id: "6071def4536dcfba68a69b160dfcecc9",
+  owner_name: "Thông Tin Doanh Nghiệp",
+  author_name: "Thông Tin Doanh Nghiệp",
+  tenant_ids: ["9c70933aff6b2a6d08c687a6cbb6b765"],
+  source_type: "",
+  crawler_system: "extension-crawler",
+  channel_name: "business"
+};
+
+function wrap(info) {
+  const now = Date.now();
+  const solr = info && info.SolrID ? info.SolrID : "";
+  return {
+    url: solr ? "https://thongtindoanhnghiep.co" + solr : "",
+    author_id: META.author_id,
+    source_type: META.source_type,
+    owner_name: META.owner_name,
+    tenant_ids: META.tenant_ids,
+    inserted_time: now,
+    owner_id: META.owner_id,
+    created_time: now,
+    flag_crawl_created_time: 0,
+    entry_rowkey: info && info.MaSoThue ? info.MaSoThue : "",
+    crawler_system: META.crawler_system,
+    information: info,
+    channel_name: META.channel_name,
+    author_name: META.author_name
+  };
+}
+
 function log(msg) {
   chrome.runtime.sendMessage({ type: "LOG", msg }).catch(() => {});
   console.log("[TTDN]", msg);
@@ -79,7 +111,7 @@ async function runProvince(cfg) {
   async function flush() {
     if (!buffer.length) return;
     await pushKafka(cfg, buffer);
-    buffer.forEach((x) => done.add(x.MaSoThue));
+    buffer.forEach((x) => done.add(x.entry_rowkey));
     await _saveDone(prov, done);
     sent += buffer.length;
     buffer = [];
@@ -90,7 +122,7 @@ async function runProvince(cfg) {
     let c;
     try { c = await apiGet("/api/company/" + todo[i]); }
     catch (e) { try { await flush(); } catch (_) {} log("403 - " + prov + " | sent " + sent + "/" + mst.length + " | verify then run again."); return; }
-    buffer.push(c);
+    buffer.push(wrap(c));
     if (buffer.length >= cfg.batch) {
       try { await flush(); } catch (e) { log("Gateway error: " + e.message + ". Stop."); return; }
       log("[" + prov + "] sent " + sent + "/" + mst.length);
