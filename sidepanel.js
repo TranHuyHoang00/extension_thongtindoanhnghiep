@@ -11,23 +11,32 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "LOG") addLog(msg.msg);
 });
 
+function joinKey(base, key) {
+  base = (base || "").trim();
+  key = (key || "").trim();
+  if (!key) return base;
+  return base + (base.indexOf("?") === -1 ? "?" : "&") + "apikey=" + encodeURIComponent(key);
+}
+
 chrome.storage.local.get("cfg").then(({ cfg }) => {
   if (!cfg) return;
-  for (const k of ["prov", "limit", "delay", "batch", "gatewayUrl", "topic"]) {
+  for (const k of ["prov", "limit", "delay", "batch", "gatewayUrl", "apikey", "topic"]) {
     if (cfg[k] !== undefined && $(k)) $(k).value = cfg[k];
   }
 });
 
 function readCfg() {
+  const base = $("gatewayUrl").value.trim();
+  const apikey = $("apikey").value.trim();
   const cfg = {
     prov: $("prov").value.trim(),
     limit: parseInt($("limit").value, 10),
     delay: parseInt($("delay").value, 10) || 1000,
     batch: parseInt($("batch").value, 10) || 20,
-    gatewayUrl: $("gatewayUrl").value.trim(),
+    gatewayUrl: joinKey(base, apikey),
     topic: $("topic").value.trim(),
   };
-  chrome.storage.local.set({ cfg });
+  chrome.storage.local.set({ cfg: { prov: cfg.prov, limit: cfg.limit, delay: cfg.delay, batch: cfg.batch, gatewayUrl: base, apikey: apikey, topic: cfg.topic } });
   return cfg;
 }
 
