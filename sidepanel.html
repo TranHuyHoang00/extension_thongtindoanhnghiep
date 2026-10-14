@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <h2>Company Extractor</h2>
+
+  <label>Province (slug)</label>
+  <input id="prov" placeholder="bac-can" value="bac-can">
+
+  <label>Limit (-1 = all)</label>
+  <input id="limit" type="number" value="5">
+
+  <label>Delay between requests (ms)</label>
+  <input id="delay" type="number" value="1000">
+
+  <label>Batch size</label>
+  <input id="batch" type="number" value="20">
+
+  <hr>
+
+  <label>Gateway URL</label>
+  <input id="gatewayUrl" value="https://services-delivery-dev.intelsys.group/kafka/publish-message?apikey=will">
+
+  <label>Topic</label>
+  <input id="topic" value="hydra-update-account-info">
+
+  <div class="row">
+    <button id="btnStart">Start</button>
+    <button id="btnStop" class="stop">Stop</button>
+    <button id="btnReset" class="reset">Reset</button>
+  </div>
+
+  <p class="hint">Open thongtindoanhnghiep.co (pass Cloudflare) then click Start.</p>
+
+  <label>Log</label>
+  <pre id="log"></pre>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>
