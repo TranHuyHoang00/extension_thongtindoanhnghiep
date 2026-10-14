@@ -3,7 +3,7 @@
   "name": "Thong Tin Doanh Nghiep Extractor",
   "version": "1.0.0",
   "description": "Extract company data from thongtindoanhnghiep.co and send to Kafka gateway.",
-  "permissions": ["storage", "sidePanel", "scripting", "activeTab"],
+  "permissions": ["sidePanel", "scripting", "activeTab"],
   "host_permissions": [
     "https://thongtindoanhnghiep.co/*",
     "https://services-delivery-dev.intelsys.group/*"
