@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Thong Tin Doanh Nghiep Extractor",
+  "name": "ThongTinDoanhNghiep",
   "version": "1.0.0",
-  "description": "Extract company data from thongtindoanhnghiep.co and send to Kafka gateway.",
+  "description": "Extract company data",
   "permissions": ["sidePanel", "scripting", "activeTab"],
   "host_permissions": [
     "https://thongtindoanhnghiep.co/*",
@@ -17,5 +17,5 @@
     }
   ],
   "side_panel": { "default_path": "sidepanel.html" },
-  "action": { "default_title": "Thong Tin Doanh Nghiep Extractor" }
+  "action": { "default_title": "ThongTinDoanhNghiep" }
 }
