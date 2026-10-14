@@ -12,7 +12,7 @@ và gửi thẳng lên Kafka gateway. Background service worker thực hiện PO
 ## Sử dụng
 1. Mở https://thongtindoanhnghiep.co và vượt qua Cloudflare (mở /api/city, thấy JSON là được)
 2. Giữ nguyên tab đó đang mở, mở Side Panel
-3. Điền: slug tỉnh (ví dụ bac-can), limit (-1 = lấy tất cả), delay (ms), batch, Gateway URL, Topic
+3. Điền: slug tỉnh (ví dụ bac-can), limit (-1 = lấy tất cả), delay (ms) (giữa các request), batch (gom đủ x dữ liệu rồi gửi cả cụm), Gateway URL, Topic
 4. Bấm Start. Theo dõi log.
    - Dừng: bấm nút Stop
    - Chạy tiếp sau khi dừng/403: bấm Start lại (bỏ qua các mã đã gửi, đã lưu trong IndexedDB)
@@ -32,7 +32,7 @@ Extension chạy gồm 3 phần phối hợp với nhau.
 
 Chạy bên trong tab thongtindoanhnghiep.co (tab này đã qua được Cloudflare rồi). Nó dùng chính phiên đăng nhập của trình duyệt để gọi API:
 
-- Gọi API danh sách để lấy các mã số thuế (MST) theo tỉnh, từng trang.
+- Gọi API danh sách `/api/company` để lấy các mã số thuế (MST) theo tỉnh, từng trang.
 - Với mỗi MST, gọi API chi tiết `/api/company/{mst}` lấy dữ liệu raw.
 - Gom đủ số công ty bằng **batch size** rồi gửi cả cụm sang background.
 
