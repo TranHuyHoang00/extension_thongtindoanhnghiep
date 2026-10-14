@@ -1,7 +1,3 @@
-// Runs in thongtindoanhnghiep.co tab (passed Cloudflare).
-// Fetch raw via same-origin API (uses page cookies), batch, ask background to send Kafka.
-// Progress saved in IndexedDB: 403/stop does not lose data, re-run continues.
-
 let STOP = false;
 
 const META = {
@@ -41,27 +37,36 @@ function log(msg) {
   console.log("[TTDN]", msg);
 }
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 function _db() {
   return new Promise((ok, err) => {
-    const r = indexedDB.open("ttdn_ext", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("done");
+    const r = indexedDB.open("ttdn_ext", 2);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains("prog")) db.createObjectStore("prog");
+    };
     r.onsuccess = () => ok(r.result);
     r.onerror = () => err(r.error);
   });
 }
-async function _getDone(prov) {
+
+async function _getProgress(prov) {
   const d = await _db();
   return new Promise((ok) => {
-    const t = d.transaction("done", "readonly").objectStore("done").get(prov);
-    t.onsuccess = () => ok(new Set(t.result || []));
-    t.onerror = () => ok(new Set());
+    const t = d.transaction("prog", "readonly").objectStore("prog").get(prov);
+    t.onsuccess = () => ok(typeof t.result === "number" ? t.result : 0);
+    t.onerror = () => ok(0);
   });
 }
-async function _saveDone(prov, set) {
+
+async function _saveProgress(prov, page) {
   const d = await _db();
   return new Promise((ok) => {
-    const t = d.transaction("done", "readwrite");
-    t.objectStore("done").put([...set], prov);
+    const t = d.transaction("prog", "readwrite");
+    t.objectStore("prog").put(page, prov);
     t.oncomplete = () => ok();
   });
 }
@@ -82,62 +87,68 @@ async function runProvince(cfg) {
   const all = !limit || limit < 0;
   log("===== " + prov + " (" + (all ? "ALL" : limit) + ") -> topic " + cfg.topic + " =====");
 
-  const done = await _getDone(prov);
-  log("[" + prov + "] already sent: " + done.size);
+  const donePages = await _getProgress(prov);
+  const startPage = donePages + 1;
+  if (donePages > 0) log("[" + prov + "] resume from page " + startPage);
 
-  let data;
-  try { data = await apiGet("/api/company?l=" + prov + "&p=1&r=100"); }
-  catch (e) { log("403 on page 1. Open the site to pass Cloudflare, then run again."); return; }
-  const total = (data.Option && data.Option.TotalRow) || 0;
-  const want = all ? total : Math.min(limit, total);
-  const pages = Math.ceil(want / 100);
+  let pages = -1;
+  let want = 0;
+  let sentRun = 0;
 
-  let mst = (data.LtsItems || []).map((x) => x.MaSoThue).filter(Boolean);
-  for (let p = 2; p <= pages; p++) {
-    if (STOP) { log("STOPPED (listing)."); return; }
-    try {
-      data = await apiGet("/api/company?l=" + prov + "&p=" + p + "&r=100");
-      mst = mst.concat((data.LtsItems || []).map((x) => x.MaSoThue).filter(Boolean));
-    } catch (e) { log("403 on list page " + p + ". Verify then run again."); return; }
-    await new Promise((r) => setTimeout(r, delay));
-  }
-  mst = [...new Set(mst)].slice(0, want);
-  const todo = mst.filter((m) => !done.has(m));
-  log("[" + prov + "] " + mst.length + " MST, remaining " + todo.length);
+  for (let p = startPage; pages === -1 || p <= pages; p++) {
+    if (STOP) { log("STOPPED - " + prov + " before page " + p + "."); return; }
 
-  let buffer = [];
-  let sent = done.size;
+    let pageData;
+    try { pageData = await apiGet("/api/company?l=" + prov + "&p=" + p + "&r=100"); }
+    catch (e) { log("403 on list page " + p + " - " + prov + ". F5 to pass Cloudflare, then Start again."); return; }
 
-  async function flush() {
-    if (!buffer.length) return;
-    await pushKafka(cfg, buffer);
-    buffer.forEach((x) => done.add(x.entry_rowkey));
-    await _saveDone(prov, done);
-    sent += buffer.length;
-    buffer = [];
-  }
-
-  for (let i = 0; i < todo.length; i++) {
-    if (STOP) { try { await flush(); } catch (e) {} log("STOPPED - " + prov + " | sent " + sent + "/" + mst.length); return; }
-    let c;
-    try { c = await apiGet("/api/company/" + todo[i]); }
-    catch (e) { try { await flush(); } catch (_) {} log("403 - " + prov + " | sent " + sent + "/" + mst.length + " | verify then run again."); return; }
-    buffer.push(wrap(c));
-    if (buffer.length >= cfg.batch) {
-      try { await flush(); } catch (e) { log("Gateway error: " + e.message + ". Stop."); return; }
-      log("[" + prov + "] sent " + sent + "/" + mst.length);
+    if (pages === -1) {
+      const total = (pageData.Option && pageData.Option.TotalRow) || 0;
+      want = all ? total : Math.min(limit, total);
+      pages = Math.ceil(want / 100);
+      log("[" + prov + "] total " + total + ", pages " + pages);
+      if (startPage > pages) { log("[" + prov + "] already complete."); return; }
     }
-    await new Promise((r) => setTimeout(r, delay));
+
+    let msts = (pageData.LtsItems || []).map((x) => x.MaSoThue).filter(Boolean);
+    if (!all) {
+      const remain = want - (p - 1) * 100;
+      if (remain <= 0) break;
+      if (msts.length > remain) msts = msts.slice(0, remain);
+    }
+
+    let buffer = [];
+    for (let i = 0; i < msts.length; i++) {
+      if (STOP) { log("STOPPED - " + prov + " mid page " + p + " (page will redo)."); return; }
+      let c;
+      try { c = await apiGet("/api/company/" + msts[i]); }
+      catch (e) { log("403 - " + prov + " page " + p + " (page will redo). F5 then Start again."); return; }
+      buffer.push(wrap(c));
+      if (buffer.length >= cfg.batch) {
+        try { await pushKafka(cfg, buffer); } catch (e) { log("Gateway error: " + e.message + ". Stop."); return; }
+        sentRun += buffer.length;
+        buffer = [];
+      }
+      await sleep(delay);
+    }
+    if (buffer.length) {
+      try { await pushKafka(cfg, buffer); } catch (e) { log("Gateway error: " + e.message + ". Stop."); return; }
+      sentRun += buffer.length;
+      buffer = [];
+    }
+
+    await _saveProgress(prov, p);
+    log("[" + prov + "] page " + p + "/" + pages + " done | sent this run " + sentRun);
   }
-  try { await flush(); } catch (e) { log("Gateway error: " + e.message); return; }
-  log("DONE " + prov + ": sent " + sent + " companies.");
+
+  log("DONE " + prov + ": " + pages + " pages complete, sent this run " + sentRun + ".");
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "START") { STOP = false; runProvince(msg.cfg); sendResponse({ ok: true }); }
   else if (msg.type === "STOP") { STOP = true; sendResponse({ ok: true }); }
   else if (msg.type === "RESET_PROV") {
-    _saveDone(msg.prov, new Set()).then(() => { log("Cleared progress: " + msg.prov); sendResponse({ ok: true }); });
+    _saveProgress(msg.prov, 0).then(() => { log("Cleared progress: " + msg.prov); sendResponse({ ok: true }); });
     return true;
   }
 });
