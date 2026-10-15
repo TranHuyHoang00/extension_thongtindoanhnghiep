@@ -56,10 +56,10 @@ function sleep(ms) {
 
 // ===================== Cấu hình chống chặn =====================
 const BLOCK_RETRY_MS = 20000; // bị chặn: chờ 20 giây rồi thử lại tại chỗ
-const RETRIES_BEFORE_RELOAD = 1; // thử lại tại chỗ bao nhiêu lần trước khi tự F5 trang
+const RETRIES_BEFORE_RELOAD = 2; // thử lại tại chỗ bao nhiêu lần trước khi tự F5 trang
 const MAX_RELOADS = 10; // tự F5 tối đa 10 lần liên tiếp mà không tiến thêm được công ty nào
-const RESUME_DELAY_MS = 3000; // trang tải lại xong, chờ 3 giây rồi mới chạy tiếp
-const PAGE_SIZE = 100; // số công ty mỗi trang danh sách (tham số r)
+const RESUME_DELAY_MS = 5000; // trang tải lại xong, chờ 5 giây rồi mới chạy tiếp
+const PAGE_SIZE = 50; // số công ty mỗi trang danh sách (tham số r)
 
 let RUNNING = false;
 
