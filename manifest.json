@@ -16,6 +16,5 @@
       "run_at": "document_idle"
     }
   ],
-  "side_panel": { "default_path": "sidepanel.html" },
   "action": { "default_title": "ThongTinDoanhNghiep" }
 }

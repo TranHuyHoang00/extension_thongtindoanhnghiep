@@ -1,11 +1,64 @@
-body { font-family: system-ui, sans-serif; margin: 12px; font-size: 13px; color: #1f2328; }
-h2 { font-size: 15px; margin: 0 0 10px; }
-label { display: block; margin: 8px 0 2px; font-weight: 600; font-size: 12px; }
-input { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #ccc; border-radius: 6px; }
-hr { margin: 12px 0; border: none; border-top: 1px solid #eee; }
-.row { display: flex; gap: 6px; margin-top: 12px; }
-button { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; background: #2f5496; color: #fff; }
-button.stop { background: #b23b3b; }
-button.reset { background: #777; }
-.hint { color: #666; font-size: 11px; margin: 10px 0 4px; }
-pre { background: #0f172a; color: #c7f9cc; padding: 8px; border-radius: 6px; height: 240px; overflow: auto; white-space: pre-wrap; font-size: 11px; }
+body {
+  font-family: system-ui, sans-serif;
+  margin: 12px;
+  font-size: 13px;
+  color: #1f2328;
+}
+h2 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+label {
+  display: block;
+  margin: 8px 0 2px;
+  font-weight: 600;
+  font-size: 12px;
+}
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+hr {
+  margin: 12px 0;
+  border: none;
+  border-top: 1px solid #eee;
+}
+.row {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  background: #2f5496;
+  color: #fff;
+}
+button.stop {
+  background: #b23b3b;
+}
+button.reset {
+  background: #777;
+}
+.hint {
+  color: #666;
+  font-size: 11px;
+  margin: 10px 0 4px;
+}
+pre {
+  background: #0f172a;
+  color: #c7f9cc;
+  padding: 8px;
+  border-radius: 6px;
+  height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 11px;
+}
