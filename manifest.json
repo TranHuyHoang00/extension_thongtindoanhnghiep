@@ -3,10 +3,11 @@
   "name": "ThongTinDoanhNghiep",
   "version": "1.0.0",
   "description": "Extract company data",
-  "permissions": ["sidePanel", "scripting", "activeTab"],
+  "permissions": ["sidePanel", "scripting", "activeTab", "storage"],
   "host_permissions": [
     "https://thongtindoanhnghiep.co/*",
-    "https://services-delivery-dev.intelsys.group/*"
+    "https://services-delivery-dev.intelsys.group/*",
+    "https://dkpservices.intelsys.group/*"
   ],
   "background": { "service_worker": "background.js" },
   "content_scripts": [
