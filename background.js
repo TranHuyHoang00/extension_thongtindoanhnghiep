@@ -75,15 +75,62 @@ async function handleRun(msg, tabId) {
       });
       return { ok: true, reloads };
     }
+    case "RUN_BEAT":
+      // Nhịp tim: đã được ghi nhận bằng touch() trong onMessage
+      return { ok: true };
   }
   return null;
 }
 
+// ---------- [MỚI] Watchdog: tab đang chạy mà im lặng quá lâu → tự F5 ----------
+// Dùng khi proxy chết: F5 ra trang lỗi của Chrome, content script không chạy được
+// nên không tự F5 tiếp. Background vẫn sống nên F5 hộ cho đến khi vào lại được.
+// Cũng dùng khi kẹt ở trang kiểm tra Cloudflare quá lâu.
+const WATCH_MS = 3 * 60 * 1000; // 3 phút không có tín hiệu thì F5
+const beatKey = (tabId) => "beat:" + tabId;
+const lastWrite = new Map(); // hạn chế ghi storage quá dày
+
+async function touch(tabId) {
+  const now = Date.now();
+  if (now - (lastWrite.get(tabId) || 0) < 15000) return; // tối đa 15s ghi 1 lần
+  lastWrite.set(tabId, now);
+  await chrome.storage.session.set({ [beatKey(tabId)]: now });
+}
+
+chrome.alarms.create("watchdog", { periodInMinutes: 1 });
+
+chrome.alarms.onAlarm.addListener(async (a) => {
+  if (a.name !== "watchdog") return;
+  const all = await chrome.storage.session.get(null);
+  for (const k of Object.keys(all)) {
+    if (!k.startsWith("run:")) continue; // chỉ canh tab đang có lượt chạy
+    const tabId = Number(k.slice(4));
+    const last = all[beatKey(tabId)] || all[k].startedAt || 0;
+    if (Date.now() - last < WATCH_MS) continue;
+
+    try {
+      await chrome.tabs.reload(tabId);
+      console.log("[Watchdog] Tab " + tabId + " im lặng quá lâu → F5");
+    } catch {
+      // tab không còn → xoá lượt chạy
+      await chrome.storage.session.remove([k, beatKey(tabId)]);
+      continue;
+    }
+    lastWrite.set(tabId, Date.now());
+    await chrome.storage.session.set({ [beatKey(tabId)]: Date.now() });
+  }
+});
+
 chrome.tabs.onRemoved.addListener((tabId) => {
-  chrome.storage.session.remove(runKey(tabId)).catch(() => {});
+  chrome.storage.session
+    .remove([runKey(tabId), beatKey(tabId)])
+    .catch(() => {});
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // [MỚI] Mọi tin từ tab (LOG, RUN_BEAT, RUN_OK, SEND_KAFKA...) đều tính là "còn sống"
+  if (sender.tab) touch(sender.tab.id).catch(() => {});
+
   if (msg.type === "SEND_KAFKA") {
     sendKafka(msg.cfg, msg.items)
       .then(() => sendResponse({ ok: true }))

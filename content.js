@@ -50,7 +50,12 @@ function log(msg) {
   console.log("[TTDN]", msg);
 }
 
+// [MỚI] Mỗi lần chờ đều gửi nhịp tim cho background,
+// để watchdog biết tab còn sống và không F5 nhầm.
 function sleep(ms) {
+  try {
+    chrome.runtime.sendMessage({ type: "RUN_BEAT" }).catch(() => {});
+  } catch {}
   return new Promise((r) => setTimeout(r, ms));
 }
 
@@ -132,7 +137,7 @@ async function _saveProgress(prov, page, idx = 0) {
 }
 
 // ===================== Gọi API =====================
-// Bị chặn / giới hạn tạm thời (403, 429, 5xx, trả về HTML thay vì JSON, lỗi mạng):
+// Bị chặn / giới hạn tạm thời (403, 407, 408, 429, 5xx, trả về HTML thay vì JSON, lỗi mạng):
 //   chờ 20 giây thử lại tại chỗ; vẫn bị → BlockedError (runProvince sẽ tự F5 trang).
 // Lỗi khác (ví dụ 404) → Error, dừng hẳn.
 async function apiGet(url) {
@@ -150,6 +155,8 @@ async function apiGet(url) {
         }
       } else if (
         res.status === 403 ||
+        res.status === 407 || // [MỚI] proxy đòi xác thực / hết hạn
+        res.status === 408 || // [MỚI] hết thời gian chờ
         res.status === 429 ||
         res.status >= 500
       ) {
@@ -400,7 +407,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!r || !r.run) return;
   if (isChallengePage()) {
     log("Cloudflare check page detected, waiting for it to be solved...");
-    return; // giải xong Cloudflare sẽ tải lại trang, content script chạy lại từ đầu
+    // Giải xong Cloudflare sẽ tải lại trang, content script chạy lại từ đầu.
+    // Kẹt quá 3 phút thì watchdog ở background tự F5.
+    return;
   }
   log(
     "Page reloaded, resuming " +
