@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ThongTinDoanhNghiep",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Extract company data",
   "permissions": ["sidePanel", "scripting", "activeTab", "storage", "alarms"],
   "host_permissions": [
