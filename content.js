@@ -27,7 +27,8 @@ function nullToEmpty(v) {
 function wrap(info) {
   const now = Date.now();
   const solr = info && info.SolrID ? info.SolrID : "";
-  return nullToEmpty({
+  // Giữ nguyên giá trị gốc từ API (null vẫn là null), không đổi thành "".
+  return {
     url: solr ? "https://thongtindoanhnghiep.co" + solr : "",
     author_id: META.author_id,
     source_type: META.source_type,
@@ -42,7 +43,7 @@ function wrap(info) {
     information: info,
     channel_name: META.channel_name,
     author_name: META.author_name,
-  });
+  };
 }
 
 function log(msg) {
